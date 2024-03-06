@@ -4,3 +4,6 @@ streamlit
 streamlit-ace
 streamlit-modal
 python-dotenv
+duckduckgo-search
+requests
+beautifulsoup4

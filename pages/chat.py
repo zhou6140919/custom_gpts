@@ -9,6 +9,7 @@ from streamlit_modal import Modal
 
 from utils import *
 from sidebar import show
+from search import RetrievalHandler
 
 st.set_page_config(
     page_title="Quick Chat",
@@ -18,8 +19,8 @@ st.set_page_config(
 
 show()
 
-st.header("Quick Chat")
-st.write("Ask questions to our clever assistant.")
+st.title("Quick Chat")
+st.write("Ask questions to our clever assistant. Successfully connected to :spider_web:")
 
 
 # TODO: save history messages to file
@@ -32,6 +33,7 @@ parent_path = os.getcwd()
 data_path = os.path.join(parent_path, "data")
 if not os.path.exists(data_path):
     os.makedirs(data_path)
+
 
 with st.sidebar:
     with st.container():
@@ -50,6 +52,9 @@ with st.sidebar:
                 st.session_state.messages = json.load(open(s["path"]))["messages"]
                 st.session_state.model = json.load(open(s["path"]))["model"]
     
+
+
+
 with st.container(border=True):
     # choose model by user
     a, b = st.columns(2)
@@ -86,12 +91,10 @@ with st.container(border=True):
             system_prompt = st.text_area("System Prompt", value="You are a helpful assistant.", disabled=flag)
 
 
-async def chat(messages, model):
-    with st.chat_message("User"):
-        st.markdown(prompt)
+async def chat(messages, model, new_prompt=None):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
-        messages = await run_conversation(messages, model, message_placeholder)
+        messages = await run_conversation(messages, model, message_placeholder, new_prompt)
         st.session_state.messages = messages
     if len(st.session_state.messages) > 2:
         st.session_state.need_save = True
@@ -115,22 +118,23 @@ async def chat(messages, model):
 if "messages" not in st.session_state or len(st.session_state.messages) < 2:
     messages = [{"role": "system", "content": system_prompt}]
     st.session_state.messages = messages
-    print(messages)
 if 'need_save' not in st.session_state:
     st.session_state.need_save = False
 # Print all messages in the session state
 for message in [m for m in st.session_state.messages if m["role"] != "system"]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+ret = RetrievalHandler(st.session_state.model, message_placeholder=st.empty())
 
 confirm_modal = Modal(title="", key="confirm_modal", max_width=500)
-
-    
     
 
 if prompt := st.chat_input("Ask me anything"):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    asyncio.run(chat(st.session_state.messages, st.session_state.model))
+    with st.chat_message("User"):
+        st.markdown(prompt)
+    new_prompt = ret.check_and_retrieve(prompt)
+    asyncio.run(chat(st.session_state.messages, st.session_state.model, new_prompt if new_prompt != prompt else None))
     st.rerun()
 
 def delete_history():

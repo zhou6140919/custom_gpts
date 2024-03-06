@@ -7,7 +7,17 @@ This is an open source and simple framework based on `Streamlit` to get access t
 ```bash
 git clone https://github.com/zhou6140919/custom_gpts.git
 cd custom_gpts
+```
+### Docker
+```bash
 docker compose up
+```
+### Conda
+```bash
+conda create -n custom_gpts python=3.11
+conda activate custom_gpts
+pip install -r requirements.txt
+streamlit run index.py
 ```
 
 Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
@@ -22,8 +32,14 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 
 ### Tools
 - [ ] Retriever
-- [ ] Web Search
+- [x] Web Search
 
 ### Convenience
 - [x] Load & Save Chat History
 - [ ] Upload Files
+
+
+## Updates
+
+- 2024-03-06: Add Web Search based on DuckDuckGo
+- 2024-03-05: Add GPT-4, GPT-3.5, Claude-3; Add Load & Save Chat History
