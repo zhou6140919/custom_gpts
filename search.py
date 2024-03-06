@@ -68,7 +68,7 @@ class RetrievalHandler:
                 model=self.model,
                 messages=[
                     {"role": "system", "content": example},
-                    {"role": "user", "content": prompt}],
+                    {"role": "user", "content": "Instruction " + prompt}],
                 max_tokens=200,
             ).choices[0].message.content
         elif "claude" in self.model:
