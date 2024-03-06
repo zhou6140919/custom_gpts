@@ -3,6 +3,7 @@ import pathlib
 import asyncio
 import random
 import json
+from glob import glob
 
 import streamlit as st
 from streamlit_modal import Modal
@@ -31,10 +32,12 @@ if 'load_history' not in st.session_state:
 
 parent_path = pathlib.Path(__file__).parent.parent.resolve()
 data_path = os.path.join(parent_path, "data")
+if not os.path.exists(data_path):
+    os.makedirs(data_path)
 
 with st.sidebar:
     st.header("Chat History")
-    history_files = [f for f in os.listdir(data_path) if os.path.isfile(os.path.join(data_path, f))]
+    history_files = [f for f in glob(f"{data_path}/*.json")]
     history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
     for s in history_look_ups:
         with st.container(height=75, border=True):
@@ -87,7 +90,8 @@ async def chat(messages, model):
         st.session_state.need_save = True
     if st.session_state.need_save:
         if 'file_key' not in st.session_state:
-            st.session_state.file_key = random.randint(0, 1000000000)
+            while st.session_state.file_key in [int(f.replace(".json", "")) for f in glob(f"{data_path}/*.json")]:
+                st.session_state.file_key = random.randint(0, 1000000000)
         if st.session_state.load_history:
             title = json.load(open(f"{st.session_state.file_key}.json"))["title"]
         else:

@@ -3,3 +3,4 @@ anthropic
 streamlit
 streamlit-ace
 streamlit-modal
+python-dotenv
