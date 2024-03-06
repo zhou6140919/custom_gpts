@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 
 from openai import OpenAI, OpenAIError
 from anthropic import Anthropic
@@ -61,14 +62,15 @@ class RetrievalHandler:
 
     def need_retrieve(self, prompt) -> bool:
         example = """
-        Instructions Given an instruction, please make a judgment on whether finding some external documents from the web (e.g., Wikipedia) helps to generate a better response. Please answer [Yes] or [No] and write an explanation. Demonstrations Instruction Give three tips for staying healthy.\nNeed retrieval? [Yes]\nExplanation There might be some online sources listing three tips for staying healthy or some reliable sources to explain the effects of different behaviors on health. So retrieving documents is helpful to improve the response to this query. Instruction Describe a time when you had to make a difficult decision.\nNeed retrieval? [No]\nExplanation This instruction is asking about some personal experience and thus it does not require one to find some external documents. Instruction Write a short story in third person narration about a protagonist who has to make an important career decision.\nNeed retrieval? [No]\nExplanation This instruction asks us to write a short story, which does not require external evidence to verify. Instruction What is the capital of France?\nNeed retrieval? [Yes]\nExplanation While the instruction simply asks us to answer the capital of France, which is a widely known fact, retrieving web documents for this question can still help. Instruction Find the area of a circle given its radius. Radius = 4\nNeed retrieval? [No]\nExplanation This is a math question and although we may be able to find some documents describing a formula, it is unlikely to find a document exactly mentioning the answer. Instruction Arrange the words in the given sentence to form a grammatically correct sentence. quickly the brown fox jumped\nNeed retrieval? [No]\nExplanation This task doesn’t require any external evidence, as it is a simple grammatical question. Instruction Explain the process of cellular respiration in plants.\nNeed retrieval? [Yes]\nExplanation This instruction asks for a detailed description of a scientific concept, and is highly likely that we can find a reliable and useful document to support the response.
+        Instructions\nGiven an instruction, please make a judgment on whether finding some external documents from the web (e.g., Wikipedia) helps to generate a better response. Please answer [Yes] or [No] and write an explanation.\nDemonstrations\nInstruction Give three tips for staying healthy.\nNeed retrieval? [Yes]\nExplanation There might be some online sources listing three tips for staying healthy or some reliable sources to explain the effects of different behaviors on health. So retrieving documents is helpful to improve the response to this query.\nInstruction Describe a time when you had to make a difficult decision.\nNeed retrieval? [No]\nExplanation This instruction is asking about some personal experience and thus it does not require one to find some external documents.\nInstruction Write a short story in third person narration about a protagonist who has to make an important career decision.\nNeed retrieval? [No]\nExplanation This instruction asks us to write a short story, which does not require external evidence to verify.\nInstruction What is the capital of France?\nNeed retrieval? [Yes]\nExplanation While the instruction simply asks us to answer the capital of France, which is a widely known fact, retrieving web documents for this question can still help.\nInstruction Find the area of a circle given its radius. Radius = 4\nNeed retrieval? [No]\nExplanation This is a math question and although we may be able to find some documents describing a formula, it is unlikely to find a document exactly mentioning the answer.\nInstruction Arrange the words in the given sentence to form a grammatically correct sentence. quickly the brown fox jumped\nNeed retrieval? [No]\nExplanation This task doesn’t require any external evidence, as it is a simple grammatical question.\nInstruction Explain the process of cellular respiration in plants.\nNeed retrieval? [Yes]\nExplanation This instruction asks for a detailed description of a scientific concept, and is highly likely that we can find a reliable and useful document to support the response.\nInstruction What's the weather like today in New York?\nNeed retrieval? [Yes]\nExplanation This instruction is asking for the current weather in New York, that is, the answer should be searched from the internet.
         """
         if 'gpt' in self.model:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": example},
-                    {"role": "user", "content": "Instruction " + prompt}],
+                    {"role": "user", "content": f"Current time is {datetime.datetime.now().isoformat()} which you don't know and compare it to your knowledge cut-off, do you think the following input is beyond your knowledge? {prompt}"},
+                ],
                 max_tokens=200,
             ).choices[0].message.content
         elif "claude" in self.model:
@@ -76,7 +78,8 @@ class RetrievalHandler:
                 model=self.model,
                 system=example,
                 messages=[
-                    {"role": "user", "content": "Instruction " + prompt}],
+                    {"role": "user", "content": f"Current time is {datetime.datetime.now().isoformat()} which you don't know and compare it to your knowledge cut-off, do you think the following input is beyond your knowledge? {prompt}"},
+                ],
                 max_tokens=200,
             ).content[0].text
         else:
