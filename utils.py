@@ -21,10 +21,3 @@ async def run_conversation(messages: List[Dict[str, str]]=[], model: str=None, m
     message_placeholder.markdown(full_response)
     messages.append({"role": "assistant", "content": full_response})
     return messages
-
-
-async def conversation_starter(system_prompt: str="You are a helpful assistant", model: str=None, message_placeholder: DeltaGenerator=None) -> List[Dict[str, str]]:
-    system_prompt = {"role": "system", "content": system_prompt}
-    messages = await run_conversation(system_prompt, model, message_placeholder)
-    return messages
-    

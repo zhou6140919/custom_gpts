@@ -90,6 +90,7 @@ async def chat(messages, model):
         st.session_state.need_save = True
     if st.session_state.need_save:
         if 'file_key' not in st.session_state:
+            st.session_state.file_key = random.randint(0, 1000000000)
             while st.session_state.file_key in [int(f.replace(".json", "")) for f in glob(f"{data_path}/*.json")]:
                 st.session_state.file_key = random.randint(0, 1000000000)
         if st.session_state.load_history:
