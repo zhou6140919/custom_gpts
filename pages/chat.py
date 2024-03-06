@@ -1,5 +1,4 @@
 import os
-import pathlib
 import asyncio
 import random
 import json
@@ -25,25 +24,29 @@ st.write("Ask questions to our clever assistant.")
 
 # TODO: save history messages to file
 
-if 'confirm' not in st.session_state:
-    st.session_state.confirm = False
 if 'load_history' not in st.session_state:
     st.session_state.load_history = False
 
-parent_path = pathlib.Path(__file__).parent.parent.resolve()
+
+parent_path = os.getcwd()
 data_path = os.path.join(parent_path, "data")
 if not os.path.exists(data_path):
     os.makedirs(data_path)
 
 with st.sidebar:
-    st.header("Chat History")
+    with st.container():
+        a, b = st.columns(2)
+        with a:
+            st.header("Chat History")
+        with b:
+            clear_all = st.button("Delete All History", type="primary")
     history_files = [f for f in glob(f"{data_path}/*.json")]
     history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
     for s in history_look_ups:
         with st.container(height=75, border=True):
-            if st.button(s["title"][:20], use_container_width=True):
+            if st.button(s["title"][:20], use_container_width=True, key=int(s["file_name"].split("/")[-1].replace(".json", ""))):
                 st.session_state.load_history = True
-                st.session_state.file_key = int(s["file_name"].replace(".json", ""))
+                st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
                 st.session_state.messages = json.load(open(s["path"]))["messages"]
                 st.session_state.model = json.load(open(s["path"]))["model"]
     
@@ -57,7 +60,11 @@ with st.container(border=True):
             index = 0
         else:
             index = model_options.index(st.session_state.model)
-        model = st.radio("Select a model engine", options=model_options, index=index)
+        if 'messages' in st.session_state and len(st.session_state.messages) > 1:
+            flag = True
+        else:
+            flag = False
+        model = st.radio("Select a model engine", options=model_options, index=index, disabled=flag)
         st.session_state.model = model
         clear = st.button("Delete History")
     with d:
@@ -91,10 +98,10 @@ async def chat(messages, model):
     if st.session_state.need_save:
         if 'file_key' not in st.session_state:
             st.session_state.file_key = random.randint(0, 1000000000)
-            while st.session_state.file_key in [int(f.replace(".json", "")) for f in glob(f"{data_path}/*.json")]:
+            while st.session_state.file_key in [int(f.split("/")[-1].replace(".json", "")) for f in glob(f"{data_path}/*.json")]:
                 st.session_state.file_key = random.randint(0, 1000000000)
         if st.session_state.load_history:
-            title = json.load(open(f"{st.session_state.file_key}.json"))["title"]
+            title = json.load(open(os.path.join(data_path, f"{st.session_state.file_key}.json")))["title"]
         else:
             # TODO: get title
             title = st.session_state.messages[1]["content"][:30]
@@ -105,7 +112,6 @@ async def chat(messages, model):
     return messages
 
 
-#if st.session_state.confirm:
 if "messages" not in st.session_state or len(st.session_state.messages) < 2:
     messages = [{"role": "system", "content": system_prompt}]
     st.session_state.messages = messages
@@ -125,9 +131,15 @@ confirm_modal = Modal(title="", key="confirm_modal", max_width=500)
 if prompt := st.chat_input("Ask me anything"):
     st.session_state.messages.append({"role": "user", "content": prompt})
     asyncio.run(chat(st.session_state.messages, st.session_state.model))
+    st.rerun()
 
 def delete_history():
     os.remove(os.path.join(data_path, f"{st.session_state.file_key}.json"))
+    st.session_state.clear()
+
+def delete_all_history():
+    for f in glob(f"{data_path}/*.json"):
+        os.remove(f)
     st.session_state.clear()
     
 if clear:
@@ -137,6 +149,14 @@ if clear:
         else:
             st.write("Are you sure you want to delete the chat history?")
             st.button("Yes", on_click=delete_history)
+
+if clear_all:
+    with confirm_modal.container():
+        if len(history_files) < 1:
+            st.write("There is no chat history to delete.")
+        else:
+            st.write("Are you sure you want to delete all chat history?")
+            st.button("Yes", on_click=delete_all_history)
                 
 if new_chat:
     st.session_state.clear()
