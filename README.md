@@ -15,15 +15,15 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 ## Features
 
 ### Models
-    - [x] GPT-4
-    - [x] GPT-3.5
-    - [x] Claude-3
-    - [ ] Gemini
+- [x] GPT-4
+- [x] GPT-3.5
+- [x] Claude-3
+- [ ] Gemini
 
 ### Tools
-    - [ ] Retriever
-    - [ ] Web Search
+- [ ] Retriever
+- [ ] Web Search
 
 ### Convenience
-    - [x] Load & Save Chat History
-    - [ ] Upload Files
+- [x] Load & Save Chat History
+- [ ] Upload Files
