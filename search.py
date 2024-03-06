@@ -82,9 +82,9 @@ class RetrievalHandler:
         else:
             raise ValueError(f"{self.model} is not supported currently.")
         print(f"Need to Retrieve?:\n{response}")
-        if "YES" in response:
+        if "[Yes]" in response:
             return True
-        elif "NO" in response:
+        elif "[No]" in response:
             return False
         else:
             return True
