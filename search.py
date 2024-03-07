@@ -31,9 +31,9 @@ class ActionHandler:
     
     def action(self, messages):
         system_prompt = f"""
-You are an expert who can judge what to do next after reading the conversation records. There are a total of 3 predefined actions, which are web search, academic search, and no action. The following are examples, where what follows 'Output: ' is what you should output:
+You are an expert who can judge what to do next after reading the conversation records. There are a total of 3 predefined actions, which are web search, academic search, and no action. The following are examples, where what follows 'Output: ' is what you should output.:
 
-1. Web Search: It is necessary to retrieve external relevant information from the web (usually decided by the question's timing compared to the given date and complexity), and generate an appropriate search query by reading the conversation record. 
+1. Web Search: It is necessary to retrieve external relevant information from the web (usually decided by the question's timing compared to the given date and complexity), and generate an appropriate search query by reading the conversation record. Make sure to output starting with 'Search: ' and then the query you want to search for.
 	Example1 System: Current date is 2024-03-06
 	User: Can you show me some detailed information about the recent news of former Prime Minister of Canada Brian Mulroney?
 	Output: Search: 2024 former Prime Minister of Canada Brian Mulroney
@@ -87,6 +87,7 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                     ],
                     max_tokens=2000,
                 ).content[0].text
+                print(response)
             else:
                 raise ValueError(f"{self.model} is not supported currently.")
             if response.startswith("Search: "):
@@ -112,6 +113,8 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                 st.write(new_prompt)
                 return new_prompt, response
             elif response.startswith("No Action: "):
+                return last_question, ""
+            else:
                 return last_question, ""
         
 
