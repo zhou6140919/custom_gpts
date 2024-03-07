@@ -7,25 +7,113 @@ from anthropic import Anthropic
 from duckduckgo_search import DDGS
 import requests
 from bs4 import BeautifulSoup
+import streamlit as st
+import arxiv
 
 # results = DDGS().text("python programming", max_results=2)
 
-class RetrievalHandler:
-    def __init__(self, model, max_results=5, message_placeholder=None):
+class ActionHandler:
+    def __init__(self, model, max_results=5):
         self.ddgs = DDGS()
         self.model = model
         self.max_results = max_results
-        self.ph = message_placeholder
-        if 'gpt' in model:
+        if 'gpt' in self.model:
             self.client = OpenAI(
                 api_key=os.getenv("OPENAI_API_KEY")
             )
-        elif "claude" in model:
+        elif "claude" in self.model:
             self.client = Anthropic(
                 api_key=os.getenv("ANTHROPIC_API_KEY")
             )
         else:
-            raise ValueError(f"{model} is not supported currently.")
+            raise ValueError(f"{self.model} is not supported currently.")
+        self.arxiv = arxiv.Client()
+    
+    def action(self, messages):
+        system_prompt = f"""
+You are an expert who can judge what to do next after reading the conversation records. There are a total of 3 predefined actions, which are web search, academic search, and no action. The following are examples, where what follows 'Output: ' is what you should output:
+
+1. Web Search: It is necessary to retrieve external relevant information from the web (usually decided by the question's timing compared to the given date and complexity), and generate an appropriate search query by reading the conversation record. 
+	Example1 System: Current date is 2024-03-06
+	User: Can you show me some detailed information about the recent news of former Prime Minister of Canada Brian Mulroney?
+	Output: Search: 2024 former Prime Minister of Canada Brian Mulroney
+	---
+	Example2 System: Current date is 2024-03-06
+	User: Have you heard about the movie Oppenheimer?
+	Assistant: According to the web information, Oppenheimer is a 2023 epic biographical thriller film[a] written, directed, and produced by Christopher Nolan,[9] starring Cillian Murphy as J. Robert Oppenheimer, the American theoretical physicist credited with being the "father of the atomic bomb" for his role in the Manhattan Project—the World War II undertaking that developed the first nuclear weapons. Based on the 2005 biography American Prometheus by Kai Bird and Martin J. Sherwin, the film chronicles the career of J. Robert Oppenheimer, with the story predominantly focusing on his studies, his direction of the Los Alamos Laboratory during World War II, and his eventual fall from grace due to his 1954 security hearing. The film also stars Emily Blunt as Oppenheimer's wife "Kitty", Matt Damon as head of the Manhattan Project Leslie Groves, Robert Downey Jr. as United States Atomic Energy Commission member Lewis Strauss, and Florence Pugh as Oppenheimer's communist lover Jean Tatlock. The ensemble supporting cast includes Josh Hartnett, Casey Affleck, Rami Malek, and Kenneth Branagh.
+	User: Okay, can you help me find some comments on the Internet?
+	Output: Search: Oppenheimer movie comments
+2. Academic Search: It is necessary to search for papers or academic-related information from the arxiv website (usually the user will directly ask for the paper title, author, or technique, etc.), and generate an appropriate search query by reading the conversation record leading by 'Arxiv: '.
+Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION"? Output: Arxiv: SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION
+	---
+	Example2
+	System: Current date is 2024-03-06
+	User: Show me the papers written by Kaiming He.
+	Output: Arxiv: Kaiming He
+3. No Action: No external knowledge is required at all, and AI can answer the question using its already acquired knowledge. You only need to output starting with 'No Action: ' and just copy the user's question, do not add any other content on your own.
+	Example
+	System: Current date is 2024-03-06
+	User: Write a short story in third person narration about a protagonist who has to make an important career decision.
+	Output: No Action: Write a short story in third person narration about a protagonist who has to make an important career decision.
+	---
+	Example2
+	System: Current date is 2024-03-06 User: Describe a time when you had to make a difficult decision.
+	Output: No Action: Describe a time when you had to make a difficult decision.
+        """
+        reform_messages = []
+        for message in messages:
+            if message["role"] == "user":
+                reform_messages.append("User: "+message["content"])
+            elif message["role"] == "assistant":
+                reform_messages.append("Assistant: "+message["content"])
+        last_question = reform_messages[-1][6:]
+        reform_messages = f"System: Current date is {datetime.date.today().strftime('%Y-%m-%d')}\n" + "\n".join(reform_messages) + "\n" + "Output: "
+        with st.status(label="Thinking...", expanded=False) as status:
+            if 'gpt' in self.model:
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": reform_messages},
+                    ],
+                    max_tokens=2000,
+                ).choices[0].message.content
+            elif "claude" in self.model:
+                response = self.client.messages.create(
+                    model=self.model,
+                    system=system_prompt,
+                    messages=[
+                        {"role": "user", "content": reform_messages},
+                    ],
+                    max_tokens=2000,
+                ).content[0].text
+            else:
+                raise ValueError(f"{self.model} is not supported currently.")
+            if response.startswith("Search: "):
+                status.update(label=response)
+                query = response[8:]
+                new_prompt = f"""
+                The question input by the user is: "{last_question}"
+                Based on your judgment, the following information has been found on the Internet using the query {query}. Please consider this information as your own knowledge to form an accurate answer.
+                {json.dumps(self.search(query), ensure_ascii=False, indent=4)}
+                """
+                st.write(new_prompt)
+                return new_prompt, response
+            elif response.startswith("Arxiv: "):
+                status.update(label=response)
+                query = response[7:]
+                r = list(self.arxiv.results(arxiv.Search(query=query, max_results=self.max_results, sort_by=arxiv.SortCriterion.Relevance)))
+                retrieved = [{"Title": result.title, "Authors": ", ".join([author.name for author in result.authors]), "Summary": result.summary} for result in r]
+                new_prompt = f"""
+                The question input by the user is: "{last_question}"
+                Based on your judgment, the following information has been found on the Internet. Please consider this information as your own knowledge to form an accurate answer.
+                {json.dumps(retrieved, ensure_ascii=False, indent=4)}
+                """
+                st.write(new_prompt)
+                return new_prompt, response
+            elif response.startswith("No Action: "):
+                return last_question, ""
+        
 
     def search(self, query):
         result_dict = self.ddgs.text(query, max_results=self.max_results)
@@ -43,56 +131,3 @@ class RetrievalHandler:
             else:
                 print(f"Failed to retrieve {href}")
         return all_results
-        
-    
-    # TODO: refine query
-    def check_and_retrieve(self, input_text):
-        if self.need_retrieve(input_text):
-            self.ph.markdown(f"This question is beyond my knowledge. Searching the internet for information...")
-            new_prompt = f"""
-            The question input by the user is: "{input_text}"
-            Based on your judgment, the following information has been found on the Internet. Please combine this information to form an accurate answer.
-            {json.dumps(self.search(input_text), ensure_ascii=False)}
-            """
-            print("New Prompt:", new_prompt)
-            return new_prompt
-        else:
-            return input_text
-            
-
-    def need_retrieve(self, prompt) -> bool:
-        example = """
-        Instructions\nGiven an instruction, please make a judgment on whether finding some external documents from the web (e.g., Wikipedia) helps to generate a better response. Please answer [Yes] or [No] and write an explanation.\nDemonstrations\nInstruction Give three tips for staying healthy.\nNeed retrieval? [Yes]\nExplanation There might be some online sources listing three tips for staying healthy or some reliable sources to explain the effects of different behaviors on health. So retrieving documents is helpful to improve the response to this query.\nInstruction Describe a time when you had to make a difficult decision.\nNeed retrieval? [No]\nExplanation This instruction is asking about some personal experience and thus it does not require one to find some external documents.\nInstruction Write a short story in third person narration about a protagonist who has to make an important career decision.\nNeed retrieval? [No]\nExplanation This instruction asks us to write a short story, which does not require external evidence to verify.\nInstruction What is the capital of France?\nNeed retrieval? [Yes]\nExplanation While the instruction simply asks us to answer the capital of France, which is a widely known fact, retrieving web documents for this question can still help.\nInstruction Find the area of a circle given its radius. Radius = 4\nNeed retrieval? [No]\nExplanation This is a math question and although we may be able to find some documents describing a formula, it is unlikely to find a document exactly mentioning the answer.\nInstruction Arrange the words in the given sentence to form a grammatically correct sentence. quickly the brown fox jumped\nNeed retrieval? [No]\nExplanation This task doesn’t require any external evidence, as it is a simple grammatical question.\nInstruction Explain the process of cellular respiration in plants.\nNeed retrieval? [Yes]\nExplanation This instruction asks for a detailed description of a scientific concept, and is highly likely that we can find a reliable and useful document to support the response.\nInstruction What's the weather like today in New York?\nNeed retrieval? [Yes]\nExplanation This instruction is asking for the current weather in New York, that is, the answer should be searched from the internet.
-        """
-        if 'gpt' in self.model:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": example},
-                    {"role": "user", "content": f"Current time is {datetime.datetime.now().isoformat()} which you don't know and compare it to your knowledge cut-off, do you think the following input is beyond your knowledge? {prompt}"},
-                ],
-                max_tokens=200,
-            ).choices[0].message.content
-        elif "claude" in self.model:
-            response = self.client.messages.create(
-                model=self.model,
-                system=example,
-                messages=[
-                    {"role": "user", "content": f"Current time is {datetime.datetime.now().isoformat()} which you don't know and compare it to your knowledge cut-off, do you think the following input is beyond your knowledge? {prompt}"},
-                ],
-                max_tokens=200,
-            ).content[0].text
-        else:
-            raise ValueError(f"{self.model} is not supported currently.")
-        print(f"Need to Retrieve?:\n{response}")
-        if "[Yes]" in response:
-            return True
-        elif "[No]" in response:
-            return False
-        else:
-            return True
-
-    def need_retrieve_prompt(self, input_text):
-        return f"""The following input is from the user: "{input_text}"."""
-    
-        

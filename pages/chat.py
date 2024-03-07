@@ -9,7 +9,7 @@ from streamlit_modal import Modal
 
 from utils import *
 from sidebar import show
-from search import RetrievalHandler
+from search import ActionHandler
 
 st.set_page_config(
     page_title="Quick Chat",
@@ -22,8 +22,6 @@ show()
 st.title("Quick Chat")
 st.write("Ask questions to our clever assistant. Successfully connected to :spider_web:")
 
-
-# TODO: save history messages to file
 
 if 'load_history' not in st.session_state:
     st.session_state.load_history = False
@@ -52,8 +50,6 @@ with st.sidebar:
                 st.session_state.messages = json.load(open(s["path"]))["messages"]
                 st.session_state.model = json.load(open(s["path"]))["model"]
     
-
-
 
 with st.container(border=True):
     # choose model by user
@@ -91,11 +87,13 @@ with st.container(border=True):
             system_prompt = st.text_area("System Prompt", value="You are a helpful assistant.", disabled=flag)
 
 
-async def chat(messages, model, new_prompt=None):
+async def chat(messages, model):
     with st.chat_message("assistant"):
+        new_prompt, action_query = ah.action(messages)
         message_placeholder = st.empty()
-        messages = await run_conversation(messages, model, message_placeholder, new_prompt)
+        messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None)
         st.session_state.messages = messages
+        st.session_state.messages[-1].update({"action": action_query, "new_prompt": new_prompt})
     if len(st.session_state.messages) > 2:
         st.session_state.need_save = True
     if st.session_state.need_save:
@@ -118,27 +116,33 @@ async def chat(messages, model, new_prompt=None):
 if "messages" not in st.session_state or len(st.session_state.messages) < 2:
     messages = [{"role": "system", "content": system_prompt}]
     st.session_state.messages = messages
+
+    
+
 if 'need_save' not in st.session_state:
     st.session_state.need_save = False
 # Print all messages in the session state
 for message in [m for m in st.session_state.messages if m["role"] != "system"]:
     with st.chat_message(message["role"]):
+        if message.get("action", None):
+            with st.status(label=message["action"], expanded=False, state="complete"):
+                st.write(message["new_prompt"])
         st.markdown(message["content"])
-ret = RetrievalHandler(st.session_state.model, message_placeholder=st.empty())
 
+        
 confirm_modal = Modal(title="", key="confirm_modal", max_width=500)
-    
 
 if prompt := st.chat_input("Ask me anything"):
-    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("User"):
         st.markdown(prompt)
-    new_prompt = ret.check_and_retrieve(prompt)
-    asyncio.run(chat(st.session_state.messages, st.session_state.model, new_prompt if new_prompt != prompt else None))
+    ah = ActionHandler(model)
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    asyncio.run(chat(st.session_state.messages, st.session_state.model))
     st.rerun()
 
 def delete_history():
-    os.remove(os.path.join(data_path, f"{st.session_state.file_key}.json"))
+    if 'file_key' in st.session_state:
+        os.remove(os.path.join(data_path, f"{st.session_state.file_key}.json"))
     st.session_state.clear()
 
 def delete_all_history():

@@ -33,6 +33,7 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 ### Tools
 - [ ] Retriever
 - [x] Web Search
+- [x] Arxiv
 
 ### Convenience
 - [x] Load & Save Chat History
@@ -41,5 +42,5 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 
 ## Updates
 
-- 2024-03-06: Add Web Search based on DuckDuckGo
+- 2024-03-06: Add Web Search based on DuckDuckGo; Add Arxiv Search
 - 2024-03-05: Add GPT-4, GPT-3.5, Claude-3; Add Load & Save Chat History
