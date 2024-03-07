@@ -3,6 +3,7 @@ import asyncio
 import random
 import json
 from glob import glob
+import copy
 
 import streamlit as st
 from streamlit_modal import Modal
@@ -48,7 +49,7 @@ with st.sidebar:
                 st.session_state.load_history = True
                 st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
                 st.session_state.local_messages = json.load(open(s["path"]))["messages"]
-                st.session_state.messages = st.session_state.local_messages
+                st.session_state.messages = copy.deepcopy(st.session_state.local_messages)
                 for m in st.session_state.messages:
                     if m["role"] == "user":
                         m.pop("action", None)
@@ -93,12 +94,14 @@ with st.container(border=True):
 
 
 async def chat(messages, model):
+    print("messages", messages)
     with st.chat_message("assistant"):
         new_prompt, action_query = ah.action(messages)
         message_placeholder = st.empty()
         messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None)
+        print("messages", messages)
         st.session_state.messages = messages
-        st.session_state.local_messages = messages
+        st.session_state.local_messages = copy.deepcopy(messages)
         st.session_state.local_messages[-1].update({"action": action_query, "new_prompt": new_prompt})
     if len(st.session_state.messages) > 2:
         st.session_state.need_save = True
@@ -124,7 +127,7 @@ if "messages" not in st.session_state or len(st.session_state.messages) < 2:
     st.session_state.messages = messages
 
 if "local_messages" not in st.session_state:
-    st.session_state.local_messages = st.session_state.messages
+    st.session_state.local_messages = copy.deepcopy(st.session_state.messages)
     
 
 if 'need_save' not in st.session_state:
