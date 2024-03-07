@@ -47,7 +47,12 @@ with st.sidebar:
             if st.button(s["title"][:20], use_container_width=True, key=int(s["file_name"].split("/")[-1].replace(".json", ""))):
                 st.session_state.load_history = True
                 st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
-                st.session_state.messages = json.load(open(s["path"]))["messages"]
+                st.session_state.local_messages = json.load(open(s["path"]))["messages"]
+                st.session_state.messages = st.session_state.local_messages
+                for m in st.session_state.messages:
+                    if m["role"] == "user":
+                        m.pop("action", None)
+                        m.pop("new_prompt", None)
                 st.session_state.model = json.load(open(s["path"]))["model"]
     
 
@@ -93,7 +98,8 @@ async def chat(messages, model):
         message_placeholder = st.empty()
         messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None)
         st.session_state.messages = messages
-        st.session_state.messages[-1].update({"action": action_query, "new_prompt": new_prompt})
+        st.session_state.local_messages = messages
+        st.session_state.local_messages[-1].update({"action": action_query, "new_prompt": new_prompt})
     if len(st.session_state.messages) > 2:
         st.session_state.need_save = True
     if st.session_state.need_save:
@@ -108,7 +114,7 @@ async def chat(messages, model):
             title = st.session_state.messages[1]["content"][:30]
         # auto save
         with open(os.path.join(data_path, f"{st.session_state.file_key}.json"), "w") as f:
-            json.dump({"title": title, "model": st.session_state.model, "messages": st.session_state.messages}, f, indent=4, ensure_ascii=False)
+            json.dump({"title": title, "model": st.session_state.model, "messages": st.session_state.local_messages}, f, indent=4, ensure_ascii=False)
             print(f"Saved to {st.session_state.file_key}.json")
     return messages
 
