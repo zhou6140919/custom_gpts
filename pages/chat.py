@@ -128,7 +128,7 @@ if "messages" not in st.session_state or len(st.session_state.messages) < 2:
 if 'need_save' not in st.session_state:
     st.session_state.need_save = False
 # Print all messages in the session state
-for message in [m for m in st.session_state.messages if m["role"] != "system"]:
+for message in [m for m in st.session_state.local_messages if m["role"] != "system"]:
     with st.chat_message(message["role"]):
         if message.get("action", None):
             with st.status(label=message["action"], expanded=False, state="complete"):
