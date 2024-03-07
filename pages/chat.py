@@ -123,6 +123,8 @@ if "messages" not in st.session_state or len(st.session_state.messages) < 2:
     messages = [{"role": "system", "content": system_prompt}]
     st.session_state.messages = messages
 
+if "local_messages" not in st.session_state:
+    st.session_state.local_messages = st.session_state.messages
     
 
 if 'need_save' not in st.session_state:
