@@ -4,9 +4,11 @@ import random
 import json
 from glob import glob
 import copy
+import datetime
 
 import streamlit as st
 from streamlit_modal import Modal
+from streamlit_option_menu import option_menu
 
 from utils import *
 from sidebar import show
@@ -27,12 +29,45 @@ st.write("Ask questions to our clever assistant. Successfully connected to :spid
 if 'load_history' not in st.session_state:
     st.session_state.load_history = False
 
+if 'manual_selection' not in st.session_state:
+    st.session_state.manual_selection = None
 
 parent_path = os.getcwd()
 data_path = os.path.join(parent_path, "data")
 if not os.path.exists(data_path):
     os.makedirs(data_path)
 
+
+#with st.sidebar:
+#    with st.container():
+#        a, b = st.columns(2)
+#        with a:
+#            st.header("Chat History")
+#        with b:
+#            clear_all = st.button("Delete All History", type="primary")
+#    history_files = [f for f in glob(f"{data_path}/*.json")]
+#    history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
+#    for i, s in enumerate(history_look_ups):
+#        with st.container(height=75, border=True):
+#            if st.button(s["title"][:20], use_container_width=True, key=int(s["file_name"].split("/")[-1].replace(".json", ""))):
+#                st.session_state.load_history = True
+#                st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
+#                st.session_state.local_messages = json.load(open(s["path"]))["messages"]
+#                st.session_state.messages = copy.deepcopy(st.session_state.local_messages)
+#                for m in st.session_state.messages:
+#                    if m["role"] == "user":
+#                        m.pop("action", None)
+#                        m.pop("new_prompt", None)
+#                st.session_state.model = json.load(open(s["path"]))["model"]
+
+def sort_by_date(timestamp):
+    return datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
+
+def load_history():
+    history_files = [f for f in glob(f"{data_path}/*.json")]
+    history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f), "timestamp": json.load(open(os.path.join(data_path, f)))["timestamp"]} for f in history_files]
+    history_look_ups = sorted(history_look_ups, key=lambda x: x["timestamp"], reverse=True)
+    return history_look_ups
 
 with st.sidebar:
     with st.container():
@@ -41,11 +76,31 @@ with st.sidebar:
             st.header("Chat History")
         with b:
             clear_all = st.button("Delete All History", type="primary")
-    history_files = [f for f in glob(f"{data_path}/*.json")]
-    history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
-    for s in history_look_ups:
-        with st.container(height=75, border=True):
-            if st.button(s["title"][:20], use_container_width=True, key=int(s["file_name"].split("/")[-1].replace(".json", ""))):
+    # history_files = [f for f in glob(f"{data_path}/*.json")]
+    # history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
+    history_look_ups = load_history()
+    
+    selected = option_menu(
+        menu_title=None,
+        options=["New Chat"] + [s["title"][:20] for s in history_look_ups],
+        default_index=0,
+        icons=["plus-square-fill"] + [f"{i}-circle-fill" for i, _ in enumerate(history_look_ups)],
+        orientation="vertical",
+        styles={
+            "container": {"padding": "0!important", "background-color": "#fafafa"},
+            "icon": {"font-size": "20px", "margin-right": "10px"},
+            "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+            "nav-link-selected": {"background-color": "green"},
+        },
+        manual_select=st.session_state.manual_selection
+    )
+
+    if selected == "New Chat":
+        st.session_state.clear()
+        st.session_state.load_history = False
+    else:
+        for s in history_look_ups:
+            if selected == s["title"][:20]:
                 st.session_state.load_history = True
                 st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
                 st.session_state.local_messages = json.load(open(s["path"]))["messages"]
@@ -55,7 +110,9 @@ with st.sidebar:
                         m.pop("action", None)
                         m.pop("new_prompt", None)
                 st.session_state.model = json.load(open(s["path"]))["model"]
-    
+        
+        
+
 
 with st.container(border=True):
     # choose model by user
@@ -117,8 +174,12 @@ async def chat(messages, model):
             title = st.session_state.messages[1]["content"][:30]
         # auto save
         with open(os.path.join(data_path, f"{st.session_state.file_key}.json"), "w") as f:
-            json.dump({"title": title, "model": st.session_state.model, "messages": st.session_state.local_messages}, f, indent=4, ensure_ascii=False)
+            json.dump({"title": title, "timestamp": str(datetime.datetime.now()), "model": st.session_state.model, "messages": st.session_state.local_messages}, f, indent=4, ensure_ascii=False)
             print(f"Saved to {st.session_state.file_key}.json")
+        # history_files = [f for f in glob(f"{data_path}/*.json")]
+        # history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
+        history_look_ups = load_history()
+        st.session_state.manual_selection = [i["file_name"].split('/')[-1] for i in history_look_ups].index(f"{st.session_state.file_key}.json") + 1
     return messages
 
 
