@@ -23,6 +23,9 @@ show()
 parent_path = os.getcwd()
 data_path = os.path.join(parent_path, "doc_data")
 
+if not os.path.exists(data_path):
+    os.makedirs(data_path)
+
 if 'doc_messages' not in st.session_state:
     st.session_state.doc_messages = [{"role": "system", "content": "You are an expert of reading documents. You should help users to find the information they need."}]
         
@@ -69,6 +72,7 @@ with st.container(border=True):
             else:
                 text = uploaded_file.getvalue().decode("utf-8")
             st.session_state.doc_messages.append({"role": "user", "content": "This is the document:\n\n" + text})
+            st.session_state.video_messages.append({"role": "assistant", "content": "OK, I got the document. What can I do for you?"})
         else:
             if not st.session_state.doc_load_history:
                 st.info("Please upload a file")

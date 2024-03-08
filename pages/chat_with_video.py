@@ -1,0 +1,133 @@
+import os
+import json
+import datetime
+import asyncio
+
+import streamlit as st
+from youtube_transcript_api import YouTubeTranscriptApi
+import streamlit.components.v1 as components
+
+from utils import *
+from sidebar import show
+
+st.set_page_config(
+    page_title="Chat with Video",
+    page_icon="🎬",
+    layout="wide"
+)
+
+show()
+
+st.title("Chat with Video")
+
+parent_path = os.getcwd()
+data_path = os.path.join(parent_path, "video_data")
+
+if not os.path.exists(data_path):
+    os.makedirs(data_path)
+
+if 'video_need_save' not in st.session_state:
+    st.session_state.video_need_save = False
+
+if 'video_load_history' not in st.session_state:
+    st.session_state.video_load_history = False
+
+if os.path.exists(os.path.join(data_path, "video_data.json")):
+    file = json.load(open(os.path.join(data_path, "video_data.json")))
+    st.session_state.video_load_history = True
+    st.session_state.video_messages = file["messages"]
+    st.session_state.video_model = file["model"]
+    st.session_state.video_link = file["link"]
+    st.session_state.video_language = file["language"]
+
+with st.container(border=True):
+    video_link = st.text_input("Enter the video link:", value=st.session_state.video_link if "video_link" in st.session_state else "")
+    st.session_state.video_link = video_link
+    language = st.selectbox(
+        label="Select Video Language",
+        options=["Chinese", "English"],
+        index=0 if "video_language" not in st.session_state else 0 if st.session_state.video_language == "Chinese" else 1
+    )
+    st.session_state.video_language = language
+    if not video_link:
+        st.warning("Please enter a video link.")
+        st.stop()
+    a, b = st.columns([1, 1])
+    with a:
+        st.video(video_link, start_time=0)
+    with b:
+        model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
+        if 'video_model' not in st.session_state:
+            index = 0
+        else:
+            index = model_options.index(st.session_state.video_model)
+        if 'video_messages' in st.session_state and len(st.session_state.video_messages) > 2:
+            flag = True
+        else:
+            flag = False
+        model = st.selectbox("Select a model engine", options=model_options, index=index, disabled=flag)
+        st.session_state.video_model = model
+        clear = st.button("Delete History", type="primary")
+
+        video_id = video_link.split("v=")[1]
+        lang = "zh" if language == "Chinese" else "en"
+        try:
+            subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+        except Exception as e1:
+            if lang == "zh":
+                try:
+                    subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh-Hans"])
+                except Exception as e2:
+                    st.error(f"Error: {e2}")
+                    st.stop()
+            else:
+                st.error(f"Error: {e1}")
+                st.stop()
+        if not subtitle_list:
+            st.error("No subtitle found for this video.")
+            st.stop()
+        formatted_subtitle = [f"{i['start']:.2f}s => {i['start'] + i['duration']:.2f}s: {i['text']}" for i in subtitle_list]
+        formatted_subtitle = "\n".join(formatted_subtitle)
+        if "video_messages" not in st.session_state:
+            st.session_state.video_messages = [{"role": "system", "content": "You are an expert of watching videos. You should help users to find the information they need."}]
+            st.session_state.video_messages.append({"role": "user", "content": "This is the video subtitle with timestamp:\n\n" + formatted_subtitle})
+            st.session_state.video_messages.append({"role": "assistant", "content": "OK, I got the subtitle. What can I do for you?"})
+
+def float2time(float_time):
+    m, s = divmod(float_time, 60)
+    h, m = divmod(m, 60)
+    return f"{h:02.0f}:{m:02.0f}:{s:05.2f}"
+
+
+async def chat(messages, model):
+    with st.chat_message("assistant"):
+        message_placeholder = st.empty()
+        messages = await run_conversation(messages, model, message_placeholder, None)
+        st.session_state.video_messages = messages
+    if len(st.session_state.video_messages) > 2:
+        st.session_state.video_need_save = True
+    if st.session_state.video_need_save:
+        with open(os.path.join(data_path, "video_data.json"), "w") as f:
+            json.dump({"link": st.session_state.video_link, "language": st.session_state.video_language, "timestamp": str(datetime.datetime.now()), "model": st.session_state.video_model, "messages": st.session_state.video_messages}, f, indent=4, ensure_ascii=False)
+    return messages
+
+# Print all messages in the session state
+for message in [m for m in st.session_state.video_messages if m["role"] != "system"]:
+    if message["role"] == "user" and message["content"].startswith("This is the video subtitle with timestamp:"):
+        continue
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Ask me anything"):
+    with st.chat_message("User"):
+        st.markdown(prompt)
+    st.session_state.video_messages.append({"role": "user", "content": prompt})
+    asyncio.run(chat(st.session_state.video_messages, st.session_state.video_model))
+    st.rerun()
+    
+if clear:
+    os.remove(os.path.join(data_path, "video_data.json"))
+    for key in list(st.session_state.keys()):
+        if key != "video_link" and key != "video_language" and key != "video_model":
+            del st.session_state[key]
+    st.rerun()

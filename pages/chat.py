@@ -89,7 +89,6 @@ with st.sidebar:
                     if m["role"] == "assistant":
                         m.pop("action", None)
                         m.pop("new_prompt", None)
-                print("loaded", st.session_state.messages)
                 st.session_state.model = json.load(open(s["path"]))["model"]
         
         
