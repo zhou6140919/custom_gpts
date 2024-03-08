@@ -38,28 +38,6 @@ if not os.path.exists(data_path):
     os.makedirs(data_path)
 
 
-#with st.sidebar:
-#    with st.container():
-#        a, b = st.columns(2)
-#        with a:
-#            st.header("Chat History")
-#        with b:
-#            clear_all = st.button("Delete All History", type="primary")
-#    history_files = [f for f in glob(f"{data_path}/*.json")]
-#    history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
-#    for i, s in enumerate(history_look_ups):
-#        with st.container(height=75, border=True):
-#            if st.button(s["title"][:20], use_container_width=True, key=int(s["file_name"].split("/")[-1].replace(".json", ""))):
-#                st.session_state.load_history = True
-#                st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
-#                st.session_state.local_messages = json.load(open(s["path"]))["messages"]
-#                st.session_state.messages = copy.deepcopy(st.session_state.local_messages)
-#                for m in st.session_state.messages:
-#                    if m["role"] == "user":
-#                        m.pop("action", None)
-#                        m.pop("new_prompt", None)
-#                st.session_state.model = json.load(open(s["path"]))["model"]
-
 def sort_by_date(timestamp):
     return datetime.strptime(timestamp_str, '%Y-%m-%dT%H:%M:%S')
 
@@ -71,7 +49,7 @@ def load_history():
 
 with st.sidebar:
     with st.container():
-        a, b = st.columns(2)
+        a, b = st.columns([2, 2.5])
         with a:
             st.header("Chat History")
         with b:
@@ -87,9 +65,9 @@ with st.sidebar:
         icons=["plus-square-fill"] + [f"{i}-circle-fill" for i, _ in enumerate(history_look_ups)],
         orientation="vertical",
         styles={
-            "container": {"padding": "0!important", "background-color": "#fafafa"},
+            "container": {"padding": "0!important", "background-color": "lightblue"},
             "icon": {"font-size": "20px", "margin-right": "10px"},
-            "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "#eee"},
+            "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "darkblue"},
             "nav-link-selected": {"background-color": "green"},
         },
         manual_select=st.session_state.manual_selection
@@ -106,9 +84,10 @@ with st.sidebar:
                 st.session_state.local_messages = json.load(open(s["path"]))["messages"]
                 st.session_state.messages = copy.deepcopy(st.session_state.local_messages)
                 for m in st.session_state.messages:
-                    if m["role"] == "user":
+                    if m["role"] == "assistant":
                         m.pop("action", None)
                         m.pop("new_prompt", None)
+                print("loaded", st.session_state.messages)
                 st.session_state.model = json.load(open(s["path"]))["model"]
         
         
@@ -128,16 +107,16 @@ with st.container(border=True):
             flag = True
         else:
             flag = False
-        model = st.radio("Select a model engine", options=model_options, index=index, disabled=flag)
+        #model = st.radio("Select a model engine", options=model_options, index=index, disabled=flag)
+        model = st.selectbox("Select a model engine", options=model_options, index=index, disabled=flag)
         st.session_state.model = model
-        clear = st.button("Delete History")
+        clear = st.button("Delete History", type="primary")
     with d:
         st.write("\n")
         st.markdown("- \$10/1M tokens"+ "\n"
                     "- \$0.5/1M tokens" + "\n"
                     "- $15/1M tokens" + "\n"
                     "- $3/1M tokens")
-        new_chat = st.button("New Chat")
         
     with b:
         if st.session_state.load_history:
@@ -232,12 +211,8 @@ if clear:
 
 if clear_all:
     with confirm_modal.container():
-        if len(history_files) < 1:
+        if len(history_look_ups) < 1:
             st.write("There is no chat history to delete.")
         else:
             st.write("Are you sure you want to delete all chat history?")
             st.button("Yes", on_click=delete_all_history)
-                
-if new_chat:
-    st.session_state.clear()
-    st.rerun()
