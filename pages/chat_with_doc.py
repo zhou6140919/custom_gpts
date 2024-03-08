@@ -106,6 +106,7 @@ if prompt := st.chat_input("Ask me anything"):
     st.rerun()
     
 if clear:
-    os.remove(os.path.join(data_path, "doc_data.json"))
+    if os.path.exists(os.path.join(data_path, "doc_data.json")):
+        os.remove(os.path.join(data_path, "doc_data.json"))
     st.session_state.clear()
     st.rerun()

@@ -126,7 +126,8 @@ if prompt := st.chat_input("Ask me anything"):
     st.rerun()
     
 if clear:
-    os.remove(os.path.join(data_path, "video_data.json"))
+    if os.path.exists(os.path.join(data_path, "video_data.json")):
+        os.remove(os.path.join(data_path, "video_data.json"))
     for key in list(st.session_state.keys()):
         if key != "video_link" and key != "video_language" and key != "video_model":
             del st.session_state[key]
