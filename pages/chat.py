@@ -60,7 +60,7 @@ with st.sidebar:
     
     selected = option_menu(
         menu_title=None,
-        options=["New Chat"] + [s["title"][:20] for s in history_look_ups],
+        options=["New Chat"] + [s["title"][:22] for s in history_look_ups],
         default_index=0,
         icons=["plus-square-fill"] + [f"{i}-circle-fill" for i, _ in enumerate(history_look_ups)],
         orientation="vertical",
@@ -76,9 +76,11 @@ with st.sidebar:
     if selected == "New Chat":
         st.session_state.clear()
         st.session_state.load_history = False
+        st.session_state.manual_selection = None
     else:
         for s in history_look_ups:
-            if selected == s["title"][:20]:
+            # TODO: same titles issue
+            if selected == s["title"][:22]:
                 st.session_state.load_history = True
                 st.session_state.file_key = int(s["file_name"].split("/")[-1].replace(".json", ""))
                 st.session_state.local_messages = json.load(open(s["path"]))["messages"]
@@ -146,17 +148,18 @@ async def chat(messages, model):
             st.session_state.file_key = random.randint(0, 1000000000)
             while st.session_state.file_key in [int(f.split("/")[-1].replace(".json", "")) for f in glob(f"{data_path}/*.json")]:
                 st.session_state.file_key = random.randint(0, 1000000000)
+        history_look_ups = load_history()
         if st.session_state.load_history:
             title = json.load(open(os.path.join(data_path, f"{st.session_state.file_key}.json")))["title"]
         else:
             # TODO: get title
-            title = st.session_state.messages[1]["content"][:30]
+            title = st.session_state.messages[1]["content"][:20]
+            if title in [i["title"][:20] for i in history_look_ups]:
+                title = title + f"_{random.randint(0, 100)}"
         # auto save
         with open(os.path.join(data_path, f"{st.session_state.file_key}.json"), "w") as f:
             json.dump({"title": title, "timestamp": str(datetime.datetime.now()), "model": st.session_state.model, "messages": st.session_state.local_messages}, f, indent=4, ensure_ascii=False)
             print(f"Saved to {st.session_state.file_key}.json")
-        # history_files = [f for f in glob(f"{data_path}/*.json")]
-        # history_look_ups = [{"title": json.load(open(os.path.join(data_path, f)))["title"], "file_name": f, "path": os.path.join(data_path, f)} for f in history_files]
         history_look_ups = load_history()
         st.session_state.manual_selection = [i["file_name"].split('/')[-1] for i in history_look_ups].index(f"{st.session_state.file_key}.json") + 1
     return messages
