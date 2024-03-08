@@ -65,7 +65,7 @@ with st.sidebar:
         icons=["plus-square-fill"] + [f"{i}-circle-fill" for i, _ in enumerate(history_look_ups)],
         orientation="vertical",
         styles={
-            "container": {"padding": "0!important", "background-color": "lightblue"},
+            "container": {"padding": "0!important", "background-color": "#74992e"},
             "icon": {"font-size": "20px", "margin-right": "10px"},
             "nav-link": {"font-size": "15px", "text-align": "left", "margin":"0px", "--hover-color": "darkblue"},
             "nav-link-selected": {"background-color": "green"},
