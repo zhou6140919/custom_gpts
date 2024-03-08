@@ -72,7 +72,7 @@ with st.container(border=True):
             else:
                 text = uploaded_file.getvalue().decode("utf-8")
             st.session_state.doc_messages.append({"role": "user", "content": "This is the document:\n\n" + text})
-            st.session_state.video_messages.append({"role": "assistant", "content": "OK, I got the document. What can I do for you?"})
+            st.session_state.doc_messages.append({"role": "assistant", "content": "OK, I got the document. What can I do for you?"})
         else:
             if not st.session_state.doc_load_history:
                 st.info("Please upload a file")
