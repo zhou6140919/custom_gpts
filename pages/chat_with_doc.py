@@ -50,7 +50,7 @@ with st.container(border=True):
             index = 0
         else:
             index = model_options.index(st.session_state.doc_model)
-        if 'doc_messages' in st.session_state and len(st.session_state.doc_messages) > 2:
+        if 'doc_messages' in st.session_state and len(st.session_state.doc_messages) > 3:
             flag = True
         else:
             flag = False

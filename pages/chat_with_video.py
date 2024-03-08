@@ -61,7 +61,7 @@ with st.container(border=True):
             index = 0
         else:
             index = model_options.index(st.session_state.video_model)
-        if 'video_messages' in st.session_state and len(st.session_state.video_messages) > 2:
+        if 'video_messages' in st.session_state and len(st.session_state.video_messages) > 3:
             flag = True
         else:
             flag = False
