@@ -31,16 +31,17 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 - [ ] Gemini
 
 ### Tools
-- [ ] Retriever
+- [x] Retriever
 - [x] Web Search
 - [x] Arxiv
 
 ### Convenience
 - [x] Load & Save Chat History
-- [ ] Upload Files
+- [x] Upload Files
 
 
 ## Updates
 
+- 2024-03-08: Add 'Upload Files' and 'Retriever'
 - 2024-03-06: Add Web Search based on DuckDuckGo; Add Arxiv Search
 - 2024-03-05: Add GPT-4, GPT-3.5, Claude-3; Add Load & Save Chat History
