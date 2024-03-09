@@ -101,7 +101,7 @@ with st.container(border=True):
     with c: 
         model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'model' not in st.session_state:
-            index = 0
+            index = 3
         else:
             index = model_options.index(st.session_state.model)
         if 'messages' in st.session_state and len(st.session_state.messages) > 1:

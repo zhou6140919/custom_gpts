@@ -9,6 +9,7 @@ import streamlit.components.v1 as components
 
 from utils import *
 from sidebar import show
+from bili_sub import get_bilibili_sub
 
 st.set_page_config(
     page_title="Chat with Video",
@@ -40,6 +41,11 @@ if os.path.exists(os.path.join(data_path, "video_data.json")):
     st.session_state.video_link = file["link"]
     st.session_state.video_language = file["language"]
 
+def float2time(float_time):
+    m, s = divmod(float_time, 60)
+    h, m = divmod(m, 60)
+    return f"{h:02.0f}:{m:02.0f}:{s:05.2f}"
+
 with st.container(border=True):
     video_link = st.text_input("Enter the video link:", value=st.session_state.video_link if "video_link" in st.session_state else "")
     st.session_state.video_link = video_link
@@ -52,13 +58,20 @@ with st.container(border=True):
     if not video_link:
         st.warning("Please enter a video link.")
         st.stop()
-    a, b = st.columns([1, 1])
+    a, b = st.columns([3, 1])
     with a:
-        st.video(video_link, start_time=0)
+        if "youtube.com" in video_link:
+            st.video(video_link, start_time=0)
+        elif "bilibili.com" in video_link:
+            bid = [t for t in video_link.split("/") if t.startswith('BV')][0]
+            embed_link = "https://player.bilibili.com/player.html?bvid=" + bid + "&page=1&highQuality=1&danmuku=0&autoplay=0"
+            #components.html(f'<iframe src="{embed_link}" width="100%" frameborder="0" allowfullscreen="allowfullscreen" scrolling="no"></iframe>', height=0, scrolling=True)
+            #embed_link = "https://xbeibeix.com/api/bilibili/biliplayer/?url=" + video_link
+            st.video(embed_link, start_time=0)
     with b:
         model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'video_model' not in st.session_state:
-            index = 0
+            index = 3
         else:
             index = model_options.index(st.session_state.video_model)
         if 'video_messages' in st.session_state and len(st.session_state.video_messages) > 3:
@@ -69,34 +82,46 @@ with st.container(border=True):
         st.session_state.video_model = model
         clear = st.button("Delete History", type="primary")
 
-        video_id = video_link.split("v=")[1]
         lang = "zh" if language == "Chinese" else "en"
-        try:
-            subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-        except Exception as e1:
-            if lang == "zh":
+        with st.container(height=700):
+            with st.status("Loading subtitle...") as status:
                 try:
-                    subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh-Hans"])
-                except Exception as e2:
-                    st.error(f"Error: {e2}")
+                    if "youtube.com" in video_link:
+                        video_id = video_link.split("v=")[1]
+                        subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+                        formatted_subtitle = [f"{float2time(i['start'])} => {float2time(i['start'] + i['duration'])}: {i['text']}" for i in subtitle_list]
+                        for s in formatted_subtitle:
+                            st.write(s)
+                        formatted_subtitle = "\n".join(formatted_subtitle)
+                    elif "bilibili.com" in video_link:
+                        # TODO: bilibili subtitle
+                        bid = [t for t in video_link.split("/") if t.startswith('BV')][0]
+                        subtitle_list = get_bilibili_sub(bid, lang)
+                        formatted_subtitle = [f"{float2time(i['from'])} => {float2time(i['to'])}: {i['content']}" for i in subtitle_list]
+                        for s in formatted_subtitle:
+                            st.write(s)
+                        formatted_subtitle = "\n".join(formatted_subtitle)
+                    else:
+                        st.error("Unsupported video link.")
+                        st.stop()
+                except Exception as e1:
+                    if lang == "zh":
+                        if "youtube.com" in video_link:
+                            try:
+                                subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh-Hans"])
+                            except Exception as e2:
+                                st.error(f"Error: {e2}")
+                                st.stop()
+                    else:
+                        st.error(f"Error: {e1}")
+                        st.stop()
+                if not subtitle_list:
+                    st.error("No subtitle found for this video.")
                     st.stop()
-            else:
-                st.error(f"Error: {e1}")
-                st.stop()
-        if not subtitle_list:
-            st.error("No subtitle found for this video.")
-            st.stop()
-        formatted_subtitle = [f"{i['start']:.2f}s => {i['start'] + i['duration']:.2f}s: {i['text']}" for i in subtitle_list]
-        formatted_subtitle = "\n".join(formatted_subtitle)
-        if "video_messages" not in st.session_state:
-            st.session_state.video_messages = [{"role": "system", "content": "You are an expert of watching videos. You should help users to find the information they need."}]
-            st.session_state.video_messages.append({"role": "user", "content": "This is the video subtitle with timestamp:\n\n" + formatted_subtitle})
-            st.session_state.video_messages.append({"role": "assistant", "content": "OK, I got the subtitle. What can I do for you?"})
-
-def float2time(float_time):
-    m, s = divmod(float_time, 60)
-    h, m = divmod(m, 60)
-    return f"{h:02.0f}:{m:02.0f}:{s:05.2f}"
+                if "video_messages" not in st.session_state:
+                    st.session_state.video_messages = [{"role": "system", "content": "You are an expert of watching videos. You should help users to find the information they need."}]
+                    st.session_state.video_messages.append({"role": "user", "content": "This is the video subtitle with timestamp:\n\n" + formatted_subtitle})
+                    st.session_state.video_messages.append({"role": "assistant", "content": "OK, I got the subtitle. What can I do for you?"})
 
 
 async def chat(messages, model):
