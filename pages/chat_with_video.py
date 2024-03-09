@@ -84,40 +84,32 @@ with st.container(border=True):
 
         lang = "zh" if language == "Chinese" else "en"
         with st.container(height=700):
-            with st.status("Loading subtitle...") as status:
+            if "youtube.com" in video_link:
+                video_id = video_link.split("v=")[1]
                 try:
-                    if "youtube.com" in video_link:
-                        video_id = video_link.split("v=")[1]
-                        subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
-                        formatted_subtitle = [f"{float2time(i['start'])} => {float2time(i['start'] + i['duration'])}: {i['text']}" for i in subtitle_list]
-                        for s in formatted_subtitle:
-                            st.write(s)
-                        formatted_subtitle = "\n".join(formatted_subtitle)
-                    elif "bilibili.com" in video_link:
-                        # TODO: bilibili subtitle
-                        bid = [t for t in video_link.split("/") if t.startswith('BV')][0]
-                        subtitle_list = get_bilibili_sub(bid, lang)
-                        formatted_subtitle = [f"{float2time(i['from'])} => {float2time(i['to'])}: {i['content']}" for i in subtitle_list]
-                        for s in formatted_subtitle:
-                            st.write(s)
-                        formatted_subtitle = "\n".join(formatted_subtitle)
+                    subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=[lang])
+                except Exception as e:
+                    if 'zh' in lang:
+                        subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh-Hans"])
                     else:
-                        st.error("Unsupported video link.")
+                        st.warning("No subtitle found for this video.")
                         st.stop()
-                except Exception as e1:
-                    if lang == "zh":
-                        if "youtube.com" in video_link:
-                            try:
-                                subtitle_list = YouTubeTranscriptApi.get_transcript(video_id, languages=["zh-Hans"])
-                            except Exception as e2:
-                                st.error(f"Error: {e2}")
-                                st.stop()
-                    else:
-                        st.error(f"Error: {e1}")
-                        st.stop()
-                if not subtitle_list:
-                    st.error("No subtitle found for this video.")
-                    st.stop()
+                formatted_subtitle = [f"{float2time(i['start'])} => {float2time(i['start'] + i['duration'])}: {i['text']}" for i in subtitle_list]
+            elif "bilibili.com" in video_link:
+                # TODO: bilibili subtitle
+                bid = [t for t in video_link.split("/") if t.startswith('BV')][0]
+                subtitle_list = get_bilibili_sub(bid, lang)
+                formatted_subtitle = [f"{float2time(i['from'])} => {float2time(i['to'])}: {i['content']}" for i in subtitle_list]
+            else:
+                st.error("Unsupported video link.")
+                st.stop()
+            if not subtitle_list:
+                st.error("No subtitle found for this video.")
+                st.stop()
+            with st.status("Formatting subtitle..."):
+                for s in formatted_subtitle:
+                    st.write(s)
+                formatted_subtitle = "\n".join(formatted_subtitle)
                 if "video_messages" not in st.session_state:
                     st.session_state.video_messages = [{"role": "system", "content": "You are an expert of watching videos. You should help users to find the information they need."}]
                     st.session_state.video_messages.append({"role": "user", "content": "This is the video subtitle with timestamp:\n\n" + formatted_subtitle})

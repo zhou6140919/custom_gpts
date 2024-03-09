@@ -3,4 +3,5 @@ data/*
 .env
 test.py
 doc_data
+video_data
 tmp.py
