@@ -50,15 +50,15 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
 	System: Current date is 2024-03-06
 	User: Show me the papers written by Kaiming He.
 	Output: Arxiv: Kaiming He
-3. No Action: No external knowledge is required at all, and AI can answer the question using its already acquired knowledge. You only need to output starting with 'No Action: ' and just copy the user's question, do not add any other content on your own.
+3. No Action: No external knowledge is required at all, and AI can answer the question using its already acquired knowledge. You only need to ONLY output "No Action", do not add any other content on your own.
 	Example
 	System: Current date is 2024-03-06
 	User: Write a short story in third person narration about a protagonist who has to make an important career decision.
-	Output: No Action: Write a short story in third person narration about a protagonist who has to make an important career decision.
+	Output: No Action
 	---
 	Example2
 	System: Current date is 2024-03-06 User: Describe a time when you had to make a difficult decision.
-	Output: No Action: Describe a time when you had to make a difficult decision.
+	Output: No Action
         """
         reform_messages = []
         for message in messages:
@@ -69,25 +69,34 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
         last_question = reform_messages[-1][6:]
         reform_messages = f"System: Current date is {datetime.date.today().strftime('%Y-%m-%d')}\n" + "\n".join(reform_messages) + "\n" + "Output: "
         with st.status(label="Thinking...", expanded=False) as status:
-            if 'gpt' in self.model:
+            if os.getenv("OPENAI_API_KEY"):
                 response = self.client.chat.completions.create(
-                    model=self.model,
+                    model="gpt-4-1106-preview",
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": reform_messages},
                     ],
-                    max_tokens=2000,
+                    max_tokens=100,
                 ).choices[0].message.content
-            elif "claude" in self.model:
-                response = self.client.messages.create(
-                    model=self.model,
-                    system=system_prompt,
-                    messages=[
-                        {"role": "user", "content": reform_messages},
-                    ],
-                    max_tokens=2000,
-                ).content[0].text
-                print(response)
+            # if 'gpt' in self.model:
+            #     response = self.client.chat.completions.create(
+            #         model=self.model,
+            #         messages=[
+            #             {"role": "system", "content": system_prompt},
+            #             {"role": "user", "content": reform_messages},
+            #         ],
+            #         max_tokens=2000,
+            #     ).choices[0].message.content
+            # elif "claude" in self.model:
+            #     response = self.client.messages.create(
+            #         model=self.model,
+            #         system=system_prompt,
+            #         messages=[
+            #             {"role": "user", "content": reform_messages},
+            #         ],
+            #         max_tokens=2000,
+            #     ).content[0].text
+            #     print(response)
             else:
                 raise ValueError(f"{self.model} is not supported currently.")
             if response.startswith("Search: "):
@@ -112,7 +121,7 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                 """
                 st.write(new_prompt)
                 return new_prompt, response
-            elif response.startswith("No Action: "):
+            elif response.startswith("No Action"):
                 return last_question, ""
             else:
                 return last_question, ""
