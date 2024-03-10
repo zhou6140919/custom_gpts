@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-async def converse(messages: List[Dict[str, str]]=[], model: str=None) -> AsyncGenerator[str, None]:
+async def converse(messages: List[Dict[str, str]]=[], model: str=None, max_tokens: int=2048) -> AsyncGenerator[str, None]:
     """
     Given a conversation history, generate an iterative response of strings from the OpenAI or Anthropic API.
 
@@ -39,7 +39,7 @@ async def converse(messages: List[Dict[str, str]]=[], model: str=None) -> AsyncG
             if len([m for m in messages if m["role"] == "system"]) > 0:
                 system_prompt = ' '.join([m["content"] for m in messages if m["role"] == "system"])
             with client.messages.stream(
-                max_tokens=1600,
+                max_tokens=max_tokens,
                 system=system_prompt,
                 messages=[m for m in messages if m["role"] != "system"],
                 model=model,
@@ -58,7 +58,7 @@ async def converse(messages: List[Dict[str, str]]=[], model: str=None) -> AsyncG
             async for chunk in await client.chat.completions.create(
                 model=model,
                 messages=messages,
-                max_tokens=1600,
+                max_tokens=max_tokens,
                 stream=True
             ):
                 content = chunk.choices[0].delta.content

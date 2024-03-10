@@ -6,14 +6,14 @@ import streamlit as st
 from conversation import converse
 
 
-async def run_conversation(messages: List[Dict[str, str]]=[], model: str=None, message_placeholder: DeltaGenerator=None, new_prompt: str=None) -> List[Dict[str, str]]:
+async def run_conversation(messages: List[Dict[str, str]]=[], model: str=None, message_placeholder: DeltaGenerator=None, new_prompt: str=None, max_tokens: int=2048) -> List[Dict[str, str]]:
     full_response = ""
     message_placeholder.markdown(f"Thinking by {model}...")
     if new_prompt:
         new_messages = messages[:-1] + [{"role": "user", "content": new_prompt}]
     else:
         new_messages = messages
-    chunks = converse(new_messages, model)
+    chunks = converse(new_messages, model, max_tokens)
     chunk = await anext(chunks, "END OF CHAT")
     while chunk != "END OF CHAT":
         #print(f"Received chunk from LLM service: {chunk}")

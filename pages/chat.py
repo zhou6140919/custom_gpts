@@ -113,6 +113,9 @@ with st.container(border=True):
         model = st.selectbox("Select a model engine", options=model_options, index=index, disabled=flag)
         st.session_state.model = model
         clear = st.button("Delete History", type="primary")
+        if 'max_tokens' not in st.session_state:
+            st.session_state.max_tokens = 2048
+        st.session_state.max_tokens = st.slider("Max Tokens", min_value=1024, max_value=16000, value=st.session_state.max_tokens, step=100)
     with d:
         st.write("\n")
         st.markdown("- \$10/1M tokens"+ "\n"
@@ -143,7 +146,7 @@ async def chat(messages, model):
         else:
             new_prompt, action_query = None, None
         message_placeholder = st.empty()
-        messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None)
+        messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None, st.session_state.max_tokens)
         print("messages", messages)
         st.session_state.messages = messages
         st.session_state.local_messages = copy.deepcopy(messages)
