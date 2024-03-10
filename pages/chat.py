@@ -32,8 +32,6 @@ if 'load_history' not in st.session_state:
 if 'manual_selection' not in st.session_state:
     st.session_state.manual_selection = None
 
-if 'use_internet' not in st.session_state:
-    st.session_state.use_internet = True
 
 parent_path = os.getcwd()
 data_path = os.path.join(parent_path, "data")
@@ -121,7 +119,10 @@ with st.container(border=True):
                     "- \$0.5/1M tokens" + "\n"
                     "- $15/1M tokens" + "\n"
                     "- $3/1M tokens")
-        st.toggle("Use Internet", value=st.session_state.use_internet, on_change=lambda x: st.session_state.update({"use_internet": x}))
+        if 'use_internet' not in st.session_state:
+            st.session_state.use_internet = True
+        st.session_state.use_internet = st.toggle("Use Internet", value=st.session_state.use_internet)
+        
         
     with b:
         if st.session_state.load_history:
@@ -139,6 +140,8 @@ async def chat(messages, model):
     with st.chat_message("assistant"):
         if st.session_state.use_internet:
             new_prompt, action_query = ah.action(messages)
+        else:
+            new_prompt, action_query = None, None
         message_placeholder = st.empty()
         messages = await run_conversation(messages, model, message_placeholder, new_prompt if action_query else None)
         print("messages", messages)
