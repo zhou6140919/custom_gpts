@@ -115,7 +115,7 @@ with st.container(border=True):
         clear = st.button("Delete History", type="primary")
         if 'max_tokens' not in st.session_state:
             st.session_state.max_tokens = 2048
-        st.session_state.max_tokens = st.slider("Max Tokens", min_value=1024, max_value=16000, value=st.session_state.max_tokens, step=100)
+        st.session_state.max_tokens = st.slider("Max Tokens", min_value=1024, max_value=4096, value=st.session_state.max_tokens, step=128)
     with d:
         st.write("\n")
         st.markdown("- \$10/1M tokens"+ "\n"
