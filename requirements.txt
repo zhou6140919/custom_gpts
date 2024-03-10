@@ -11,3 +11,4 @@ arxiv
 streamlit-option-menu
 pypdf
 youtube-transcript-api
+clipboard

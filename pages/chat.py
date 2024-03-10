@@ -5,6 +5,7 @@ import json
 from glob import glob
 import copy
 import datetime
+import clipboard
 
 import streamlit as st
 from streamlit_modal import Modal
@@ -102,7 +103,7 @@ with st.container(border=True):
     with c: 
         model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'model' not in st.session_state:
-            index = 3
+            index = 2
         else:
             index = model_options.index(st.session_state.model)
         if 'messages' in st.session_state and len(st.session_state.messages) > 1:
@@ -123,7 +124,7 @@ with st.container(border=True):
                     "- $15/1M tokens" + "\n"
                     "- $3/1M tokens")
         if 'use_internet' not in st.session_state:
-            st.session_state.use_internet = True
+            st.session_state.use_internet = False
         st.session_state.use_internet = st.toggle("Use Internet", value=st.session_state.use_internet)
         
         
@@ -186,12 +187,16 @@ if "local_messages" not in st.session_state:
 if 'need_save' not in st.session_state:
     st.session_state.need_save = False
 # Print all messages in the session state
+
+    
 for message in [m for m in st.session_state.local_messages if m["role"] != "system"]:
     with st.chat_message(message["role"]):
         if message.get("action", None):
             with st.status(label=message["action"], expanded=False, state="complete"):
                 st.write(message["new_prompt"])
         st.markdown(message["content"])
+        if st.button("📃", key=message["content"]):
+            clipboard.copy(message["content"])
 
         
 confirm_modal = Modal(title="", key="confirm_modal", max_width=500)
