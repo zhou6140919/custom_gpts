@@ -46,6 +46,7 @@ Navigate to [http://localhost:8501](http://localhost:8501) to see the app.
 
 ## Updates
 
+- 2024-03-11: Add 'Google Search'; Add 'default model' and 'search engine'
 - 2024-03-08: Add 'Upload Files' and 'Retriever'; Add 'Chat with Videos'
 - 2024-03-06: Add Web Search based on DuckDuckGo; Add Arxiv Search
 - 2024-03-05: Add GPT-4, GPT-3.5, Claude-3; Add Load & Save Chat History

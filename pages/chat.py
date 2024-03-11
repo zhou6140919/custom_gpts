@@ -26,12 +26,14 @@ show()
 st.title("Quick Chat")
 st.write("Ask questions to our clever assistant. Successfully connected to :spider_web:")
 
+print(st.session_state)
 
 if 'load_history' not in st.session_state:
     st.session_state.load_history = False
 
 if 'manual_selection' not in st.session_state:
     st.session_state.manual_selection = None
+
 
 
 parent_path = os.getcwd()
@@ -50,6 +52,8 @@ def load_history():
     return history_look_ups
 
 with st.sidebar:
+    # st.session_state.default_model = st.selectbox("Select a default model engine", options=["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"], index=0)
+    # st.session_state.default_engine = st.selectbox("Select a default web search engine", options=["google", "duckduckgo"], index=0)
     with st.container():
         a, b = st.columns([2, 2.5])
         with a:
@@ -76,9 +80,11 @@ with st.sidebar:
     )
 
     if selected == "New Chat":
-        st.session_state.clear()
-        st.session_state.load_history = False
-        st.session_state.manual_selection = None
+        if 'need_clear' in st.session_state:
+            st.session_state.clear()
+            st.session_state.load_history = False
+            st.session_state.manual_selection = None
+            st.rerun()
     else:
         for s in history_look_ups:
             # TODO: same titles issue
@@ -92,6 +98,7 @@ with st.sidebar:
                         m.pop("action", None)
                         m.pop("new_prompt", None)
                 st.session_state.model = json.load(open(s["path"]))["model"]
+                st.session_state.need_clear = True
         
         
 
@@ -103,7 +110,10 @@ with st.container(border=True):
     with c: 
         model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'model' not in st.session_state:
-            index = 2
+            if 'default_model' in st.session_state:
+                index = model_options.index(st.session_state.default_model)
+            else:
+                index = 0
         else:
             index = model_options.index(st.session_state.model)
         if 'messages' in st.session_state and len(st.session_state.messages) > 1:
@@ -154,6 +164,7 @@ async def chat(messages, model):
         st.session_state.local_messages[-1].update({"action": action_query, "new_prompt": new_prompt})
     if len(st.session_state.messages) > 2:
         st.session_state.need_save = True
+        st.session_state.need_clear = True
     if st.session_state.need_save:
         if 'file_key' not in st.session_state:
             st.session_state.file_key = random.randint(0, 1000000000)
@@ -196,6 +207,7 @@ for message in [m for m in st.session_state.local_messages if m["role"] != "syst
                 st.write(message["new_prompt"])
         st.markdown(message["content"])
         if st.button("📃", key=message["content"]):
+            # TODO: not working on server
             clipboard.copy(message["content"])
 
         

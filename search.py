@@ -9,14 +9,16 @@ import requests
 from bs4 import BeautifulSoup
 import streamlit as st
 import arxiv
+from googlesearch import search as google_search
 
 # results = DDGS().text("python programming", max_results=2)
 
 class ActionHandler:
-    def __init__(self, model, max_results=5):
+    def __init__(self, model, max_results=5, engine="duckduckgo"):
         self.ddgs = DDGS()
         self.model = model
         self.max_results = max_results
+        self.engine = engine
         if 'gpt' in self.model:
             self.client = OpenAI(
                 api_key=os.getenv("OPENAI_API_KEY")
@@ -43,8 +45,11 @@ You are an expert who can judge what to do next after reading the conversation r
 	Assistant: According to the web information, Oppenheimer is a 2023 epic biographical thriller film[a] written, directed, and produced by Christopher Nolan,[9] starring Cillian Murphy as J. Robert Oppenheimer, the American theoretical physicist credited with being the "father of the atomic bomb" for his role in the Manhattan Project—the World War II undertaking that developed the first nuclear weapons. Based on the 2005 biography American Prometheus by Kai Bird and Martin J. Sherwin, the film chronicles the career of J. Robert Oppenheimer, with the story predominantly focusing on his studies, his direction of the Los Alamos Laboratory during World War II, and his eventual fall from grace due to his 1954 security hearing. The film also stars Emily Blunt as Oppenheimer's wife "Kitty", Matt Damon as head of the Manhattan Project Leslie Groves, Robert Downey Jr. as United States Atomic Energy Commission member Lewis Strauss, and Florence Pugh as Oppenheimer's communist lover Jean Tatlock. The ensemble supporting cast includes Josh Hartnett, Casey Affleck, Rami Malek, and Kenneth Branagh.
 	User: Okay, can you help me find some comments on the Internet?
 	Output: Search: Oppenheimer movie comments
-2. Academic Search: It is necessary to search for papers or academic-related information from the arxiv website (usually the user will directly ask for the paper title, author, or technique, etc.), and generate an appropriate search query by reading the conversation record leading by 'Arxiv: '.
-Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION"? Output: Arxiv: SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION
+2. Academic Search: It is necessary to search for papers or academic-related information from the arxiv website (usually the user will directly ask for the paper title, author, or technique, etc.), and generate an appropriate search query that only contains key information in user's questions by reading the conversation record and prepend 'Arxiv: '.
+    Example1
+    System: Current date is 2024-03-06
+    User: Can you summarize the paper "SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION"?
+    Output: Arxiv: SELF-RAG: LEARNING TO RETRIEVE, GENERATE, AND CRITIQUE THROUGH SELF-REFLECTION
 	---
 	Example2
 	System: Current date is 2024-03-06
@@ -57,7 +62,8 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
 	Output: No Action
 	---
 	Example2
-	System: Current date is 2024-03-06 User: Describe a time when you had to make a difficult decision.
+	System: Current date is 2024-03-06
+    User: Describe a time when you had to make a difficult decision.
 	Output: No Action
         """
         reform_messages = []
@@ -105,7 +111,7 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                 new_prompt = f"""
                 The question input by the user is: "{last_question}"
                 Based on your judgment, the following information has been found on the Internet using the query {query}. Please consider this information as your own knowledge to form an accurate answer.
-                {json.dumps(self.search(query), ensure_ascii=False, indent=4)}
+                {json.dumps(self.search(query, self.engine), ensure_ascii=False, indent=4)}
                 """
                 st.write(new_prompt)
                 return new_prompt, response
@@ -127,11 +133,18 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                 return last_question, ""
         
 
-    def search(self, query):
-        result_dict = self.ddgs.text(query, max_results=self.max_results)
-        # scrape the hrefs and return them
-        hrefs = [result["href"] for result in result_dict]
-        titles = [result["title"] for result in result_dict]
+    def search(self, query, engine="duckduckgo"):
+        if engine == "duckduckgo":
+            result_dict = self.ddgs.text(query, max_results=self.max_results)
+            # scrape the hrefs and return them
+            hrefs = [result["href"] for result in result_dict]
+            titles = [result["title"] for result in result_dict]
+        elif engine == "google":
+            results = google_search(query, num=self.max_results, advanced=True)
+            hrefs = [result.url for result in results]
+            titles = [result.title for result in results]
+        else:
+            raise ValueError(f"{engine} is not supported currently.")
         all_results = []
         for href, title in zip(hrefs, titles):
             response = requests.get(href)
@@ -139,7 +152,7 @@ Example1 System: Current date is 2024-03-06 User: Can you summarize the paper "S
                 soup = BeautifulSoup(response.content, 'html.parser')
                 paragraphs = soup.find_all('p')
                 text = " ".join([p.get_text(strip=True) for p in paragraphs])[:3000]
-                all_results.append({"Title": title, "text": text})
+                all_results.append({"title": title, "text": text})
             else:
-                print(f"Failed to retrieve {href}")
+                print(f"Failed to retrieve {href} from web")
         return all_results

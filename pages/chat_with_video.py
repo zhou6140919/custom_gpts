@@ -71,7 +71,7 @@ with st.container(border=True):
     with b:
         model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'video_model' not in st.session_state:
-            index = 3
+            index = model_options.index(st.session_state.default_model)
         else:
             index = model_options.index(st.session_state.video_model)
         if 'video_messages' in st.session_state and len(st.session_state.video_messages) > 3:
