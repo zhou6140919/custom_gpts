@@ -142,7 +142,8 @@ You are an expert who can judge what to do next after reading the conversation r
         elif engine == "google":
             results = google_search(query, num_results=self.max_results, advanced=True)
             hrefs = [result.url for result in results]
-            titles = [result.title for result in results]
+            #titles = [result.title for result in results]
+            titles = list(range(1, self.max_results+1))
         else:
             raise ValueError(f"{engine} is not supported currently.")
         all_results = []
@@ -155,4 +156,5 @@ You are an expert who can judge what to do next after reading the conversation r
                 all_results.append({"title": title, "text": text})
             else:
                 print(f"Failed to retrieve {href} from web")
+        print(all_results)
         return all_results
