@@ -14,7 +14,7 @@ from googlesearch import search as google_search
 # results = DDGS().text("python programming", max_results=2)
 
 class ActionHandler:
-    def __init__(self, model, max_results=5, engine="duckduckgo"):
+    def __init__(self, model, max_results=5, engine="google"):
         self.ddgs = DDGS()
         self.model = model
         self.max_results = max_results
@@ -133,7 +133,7 @@ You are an expert who can judge what to do next after reading the conversation r
                 return last_question, ""
         
 
-    def search(self, query, engine="duckduckgo"):
+    def search(self, query, engine="google"):
         if engine == "duckduckgo":
             result_dict = self.ddgs.text(query, max_results=self.max_results)
             # scrape the hrefs and return them

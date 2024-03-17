@@ -52,7 +52,7 @@ def load_history():
     return history_look_ups
 
 with st.sidebar:
-    # st.session_state.default_model = st.selectbox("Select a default model engine", options=["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"], index=0)
+    # st.session_state.default_odel = st.selectbox("Select a default model engine", options=["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"], index=0)
     # st.session_state.default_engine = st.selectbox("Select a default web search engine", options=["google", "duckduckgo"], index=0)
     with st.container():
         a, b = st.columns([2, 2.5])
@@ -153,7 +153,7 @@ async def chat(messages, model):
     print("messages", messages)
     with st.chat_message("assistant"):
         if st.session_state.use_internet:
-            new_prompt, action_query = ah.action(messages)
+            new_prompt, action_query = ah.action(messages, engin=st.session_state.default_engine)
         else:
             new_prompt, action_query = None, None
         message_placeholder = st.empty()
