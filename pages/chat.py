@@ -153,7 +153,7 @@ async def chat(messages, model):
     print("messages", messages)
     with st.chat_message("assistant"):
         if st.session_state.use_internet:
-            new_prompt, action_query = ah.action(messages, engin=st.session_state.default_engine)
+            new_prompt, action_query = ah.action(messages, engine=st.session_state.default_engine)
         else:
             new_prompt, action_query = None, None
         message_placeholder = st.empty()
