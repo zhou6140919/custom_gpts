@@ -216,7 +216,7 @@ confirm_modal = Modal(title="", key="confirm_modal", max_width=500)
 if prompt := st.chat_input("Ask me anything"):
     with st.chat_message("User"):
         st.markdown(prompt)
-    ah = ActionHandler(model, engine=st.session_state.default_engine)
+    ah = ActionHandler(model)
     st.session_state.messages.append({"role": "user", "content": prompt})
     asyncio.run(chat(st.session_state.messages, st.session_state.model))
     st.rerun()
