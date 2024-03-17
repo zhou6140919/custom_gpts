@@ -140,7 +140,7 @@ You are an expert who can judge what to do next after reading the conversation r
             hrefs = [result["href"] for result in result_dict]
             titles = [result["title"] for result in result_dict]
         elif engine == "google":
-            results = google_search(query, num=self.max_results, advanced=True)
+            results = google_search(query, num_results=self.max_results, advanced=True)
             hrefs = [result.url for result in results]
             titles = [result.title for result in results]
         else:
