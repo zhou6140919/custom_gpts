@@ -45,7 +45,7 @@ with st.container(border=True):
     a, b = st.columns([1, 1])
     c, d = a.columns([1, 1])
     with c:
-        model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
+        model_options = ["gpt-4-turbo-2024-04-09", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'doc_model' not in st.session_state:
             index = model_options.index(st.session_state.default_model)
         else:

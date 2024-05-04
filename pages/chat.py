@@ -108,12 +108,9 @@ with st.container(border=True):
     a, b = st.columns(2)
     c, d = a.columns(2)
     with c: 
-        model_options = ["gpt-4-1106-preview", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
+        model_options = ["gpt-4-turbo-2024-04-09", 'gpt-3.5-turbo-0125', 'claude-3-opus-20240229', "claude-3-sonnet-20240229"]
         if 'model' not in st.session_state:
-            if 'default_model' in st.session_state:
-                index = model_options.index(st.session_state.default_model)
-            else:
-                index = 0
+            index = 0
         else:
             index = model_options.index(st.session_state.model)
         if 'messages' in st.session_state and len(st.session_state.messages) > 1:
